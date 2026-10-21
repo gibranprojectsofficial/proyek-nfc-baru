@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review & Rating</title>
+  <!-- Tailwind CSS & React CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 select-none">
+  <div id="root" class="w-full max-w-md"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ==========================================
+    // MASUKKAN KODE DARI JSONBIN DI SINI
+    // ==========================================
+    const BIN_ID = '6ace0c10ffd5d1605366e7eb'; 
+    const MASTER_KEY = '$2a$10$m5dN1tmFM1v4qhoZ1uBD1Ocq/5oL9olgVNqL3g9zDFxzL.KqXaXHy';
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+    const DEFAULT_DATA = {
+      name: 'Kedai Konyoha',
+      googleUrl: 'https://search.google.com/local/writereview?placeid=ChIJMRBecQCJJS4RDMvwWkUdNIc',
+      whatsapp: '6281234567890',
+      pin: '0000'
+    };
+
+    function App() {
+      const [storeData, setStoreData] = useState(DEFAULT_DATA);
+      const [loading, setLoading] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [step, setStep] = useState('rating');
+      const [rating, setRating] = useState(0);
+      const [hoverRating, setHoverRating] = useState(0);
+      const [feedback, setFeedback] = useState('');
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [pinInput, setPinInput] = useState('');
+      const [successMsg, setSuccessMsg] = useState(false);
+
+      // Fetch Data Live dari JSONBin saat halaman dibuka
+      useEffect(() => {
+        fetchDataFromCloud();
+      }, []);
+
+      const fetchDataFromCloud = async () => {
+        try {
+          const res = await fetch(`${API_URL}/latest`, {
+            headers: {
+              'X-Master-Key': MASTER_KEY
+            }
+          });
+          const data = await res.json();
+          if (data.record) {
+            setStoreData(data.record);
+          }
+        } catch (err) {
+          console.error("Gagal mengambil data dari server cloud:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleStarClick = (selectedRating) => {
+        setRating(selectedRating);
+        setTimeout(() => {
+          if (selectedRating >= 4) {
+            window.location.href = storeData.googleUrl;
+          } else {
+            setStep('feedback');
+          }
+        }, 300);
+      };
+
+      const handleSendFeedback = (e) => {
+        e.preventDefault();
+        const waMessage = encodeURIComponent(`💬 Ada masukan nih (Rating ${rating} Bintang):\n"${feedback}"\n\nSiap kita perbaiki demi kenyamanan pelanggan! 🚀`);
+        window.location.href = `https://wa.me/${storeData.whatsapp}?text=${waMessage}`;
+      };
+
+      const handleLoginAdmin = (e) => {
+        e.preventDefault();
+        if (pinInput === storeData.pin) {
+          setIsAdmin(true);
+        } else {
+          alert('PIN Salah!');
+        }
+      };
+
+      const handleSaveSettings = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+          // Update Data ke Cloud Server
+          await fetch(API_URL, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': MASTER_KEY
+            },
+            body: JSON.stringify(storeData)
+          });
+
+          setIsAdmin(false);
+          setStep('rating');
+          setSuccessMsg(true);
+          setTimeout(() => setSuccessMsg(false), 3000);
+        } catch (err) {
+          alert("Gagal menyimpan data ke cloud server. Periksa koneksi internet.");
+          console.error(err);
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const activeRating = hoverRating || rating;
+
+      if (loading) {
+        return (
+          <div className="text-center py-12">
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <p className="text-slate-400 text-sm">Memuat data toko...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative">
+          <div className="absolute bottom-3 right-4">
+            <button 
+              onClick={() => { setStep('admin'); setPinInput(''); }}
+              className="text-xs text-slate-500 hover:text-slate-300 transition"
+            >
+              Pengaturan
+            </button>
+          </div>
+
+          {successMsg && (
+            <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500 text-emerald-300 rounded-xl text-sm text-center">
+              Pengaturan Toko Berhasil Diperbarui Secara Live!
+            </div>
+          )}
+
+          {step === 'rating' && (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-indigo-600/20 text-indigo-400 rounded-2xl mx-auto flex items-center justify-center mb-4 text-2xl font-bold">
+                🏢
+              </div>
+              <h1 className="text-xl font-bold mb-1">{storeData.name}</h1>
+              <p className="text-slate-400 text-sm mb-6">gimana pengalaman kamu mampir di sini hari ini?✨</p>
+              
+              <div className="flex justify-center gap-2 mb-6">
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const isFilled = star <= activeRating;
+                  return (
+                    <button
+                      key={star}
+                      onClick={() => handleStarClick(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      onTouchStart={() => setHoverRating(star)}
+                      className={`w-12 h-12 rounded-xl text-2xl transition-all duration-200 flex items-center justify-center shadow ${
+                        isFilled 
+                          ? 'bg-amber-500/20 border border-amber-500 text-amber-400 scale-105' 
+                          : 'bg-slate-800 border border-slate-700/50 text-slate-600 hover:border-slate-500'
+                      }`}
+                    >
+                      ★
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500">PILIH RATING BINTANG</p>
+            </div>
+          )}
+
+          {step === 'feedback' && (
+            <div>
+              <h2 className="text-lg font-bold mb-2">OTW Jadi Lebih Baik! 🚀</h2>
+              <p className="text-slate-400 text-sm mb-4">Bisikin ke kita aja di sini! Curhatan kamu aman kok, enggak bakal di-spill ke mana-mana. Kita siap perbaiki demi kenyamanan kamu next time!</p>
+              <form onSubmit={handleSendFeedback}>
+                <textarea
+                  rows="4"
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="Tulis curhatan atau masukan kamu di sini..."
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 mb-4"
+                  required
+                ></textarea>
+                <button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition text-sm"
+                >
+                  Bantu Kami Lakukan Perbaikan 🚀
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStep('rating'); setRating(0); }}
+                  className="w-full mt-2 bg-transparent hover:bg-slate-800 text-slate-400 py-2 rounded-xl transition text-sm"
+                >
+                  Kembali
+                </button>
+              </form>
+            </div>
+          )}
+
+          {step === 'admin' && (
+            <div>
+              {!isAdmin ? (
+                <form onSubmit={handleLoginAdmin}>
+                  <h2 className="text-lg font-bold mb-2">Masukan PIN Admin</h2>
+                  <p className="text-slate-400 text-sm mb-4">Masukkan PIN untuk mengubah tautan atau nomor WhatsApp.</p>
+                  <input
+                    type="password"
+                    maxLength="4"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    placeholder="PIN (Default: 0000)"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 mb-4 tracking-widest text-center"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl transition text-sm mb-2"
+                  >
+                    Masuk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep('rating')}
+                    className="w-full bg-transparent hover:bg-slate-800 text-slate-400 py-2 rounded-xl transition text-sm"
+                  >
+                    Batal
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleSaveSettings}>
+                  <h2 className="text-lg font-bold mb-4">Pengaturan Toko (Master Admin)</h2>
+                  
+                  <div className="mb-3">
+                    <label className="block text-xs text-slate-400 mb-1">Nama Toko</label>
+                    <input
+                      type="text"
+                      value={storeData.name}
+                      onChange={(e) => setStoreData({...storeData, name: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-100"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="block text-xs text-slate-400 mb-1">Link Google Review / Maps</label>
+                    <input
+                      type="text"
+                      value={storeData.googleUrl}
+                      onChange={(e) => setStoreData({...storeData, googleUrl: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-100"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="block text-xs text-slate-400 mb-1">Nomor WhatsApp (Diawali 62)</label>
+                    <input
+                      type="text"
+                      value={storeData.whatsapp}
+                      onChange={(e) => setStoreData({...storeData, whatsapp: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-100"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-5">
+                    <label className="block text-xs text-slate-400 mb-1">PIN Baru (4 Angka)</label>
+                    <input
+                      type="text"
+                      maxLength="4"
+                      value={storeData.pin}
+                      onChange={(e) => setStoreData({...storeData, pin: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-100"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl transition text-sm mb-2 disabled:opacity-50"
+                  >
+                    {saving ? 'Menyimpan ke Cloud...' : 'Simpan Perubahan Live'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep('rating')}
+                    className="w-full bg-transparent hover:bg-slate-800 text-slate-400 py-2 rounded-xl transition text-sm"
+                  >
+                    Kembali
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          <div className="text-center mt-6 text-xs text-slate-600">
+            Powered by NFC System
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
