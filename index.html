@@ -16,15 +16,17 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // ==========================================
-    // MASUKKAN KODE DARI JSONBIN DI SINI
-    // ==========================================
-    const BIN_ID = '6ad8ebcbac6210605a466d74'; 
-    const MASTER_KEY = '$2a$10$ppPZimSlSv9lEY2acheQ5.W.5KrpQuPeDRPFoEq9VjJS9MIuL4JVS';
-    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    // Mengambil Parameter ID dari URL secara otomatis (Contoh: ?id=toko01)
+    const getQueryParam = (param) => {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param) || 'toko_default';
+    };
+
+    const currentStoreId = getQueryParam('id');
+    const STORAGE_KEY = `store_data_${currentStoreId}`;
 
     const DEFAULT_DATA = {
-      name: 'Kedai Konyoha',
+      name: `Kedai ${currentStoreId.toUpperCase()}`,
       googleUrl: 'https://search.google.com/local/writereview?placeid=ChIJMRBecQCJJS4RDMvwWkUdNIc',
       whatsapp: '6281234567890',
       pin: '0000'
@@ -42,28 +44,25 @@
       const [pinInput, setPinInput] = useState('');
       const [successMsg, setSuccessMsg] = useState(false);
 
-      // Fetch Data Live dari JSONBin saat halaman dibuka
+      // Load data khusus milik ID toko ini dari memori HP/Browser
       useEffect(() => {
-        fetchDataFromCloud();
-      }, []);
-
-      const fetchDataFromCloud = async () => {
         try {
-          const res = await fetch(`${API_URL}/latest`, {
-            headers: {
-              'X-Master-Key': MASTER_KEY
-            }
-          });
-          const data = await res.json();
-          if (data.record) {
-            setStoreData(data.record);
+          const savedData = localStorage.getItem(STORAGE_KEY);
+          if (savedData) {
+            setStoreData(JSON.parse(savedData));
+          } else {
+            // Jika belum pernah diatur, pakai default dengan nama ID-nya
+            setStoreData({
+              ...DEFAULT_DATA,
+              name: `Tempat Usaha (${currentStoreId})`
+            });
           }
         } catch (err) {
-          console.error("Gagal mengambil data dari server cloud:", err);
+          console.error("Gagal memuat data lokal:", err);
         } finally {
           setLoading(false);
         }
-      };
+      }, []);
 
       const handleStarClick = (selectedRating) => {
         setRating(selectedRating);
@@ -91,26 +90,19 @@
         }
       };
 
-      const handleSaveSettings = async (e) => {
+      const handleSaveSettings = (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-          // Update Data ke Cloud Server
-          await fetch(API_URL, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Master-Key': MASTER_KEY
-            },
-            body: JSON.stringify(storeData)
-          });
+          // Simpan data spesifik hanya untuk ID toko ini saja
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(storeData));
 
           setIsAdmin(false);
           setStep('rating');
           setSuccessMsg(true);
           setTimeout(() => setSuccessMsg(false), 3000);
         } catch (err) {
-          alert("Gagal menyimpan data ke cloud server. Periksa koneksi internet.");
+          alert("Gagal menyimpan data.");
           console.error(err);
         } finally {
           setSaving(false);
@@ -130,6 +122,10 @@
 
       return (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative">
+          <div className="absolute top-3 left-4 text-[10px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded">
+            ID: {currentStoreId}
+          </div>
+
           <div className="absolute bottom-3 right-4">
             <button 
               onClick={() => { setStep('admin'); setPinInput(''); }}
@@ -141,7 +137,7 @@
 
           {successMsg && (
             <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500 text-emerald-300 rounded-xl text-sm text-center">
-              Pengaturan Toko Berhasil Diperbarui Secara Live!
+              Pengaturan Toko Berhasil Disimpan!
             </div>
           )}
 
@@ -239,7 +235,7 @@
                 </form>
               ) : (
                 <form onSubmit={handleSaveSettings}>
-                  <h2 className="text-lg font-bold mb-4">Pengaturan Toko (Master Admin)</h2>
+                  <h2 className="text-lg font-bold mb-4">Pengaturan Toko ({currentStoreId})</h2>
                   
                   <div className="mb-3">
                     <label className="block text-xs text-slate-400 mb-1">Nama Toko</label>
@@ -291,7 +287,7 @@
                     disabled={saving}
                     className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl transition text-sm mb-2 disabled:opacity-50"
                   >
-                    {saving ? 'Menyimpan ke Cloud...' : 'Simpan Perubahan Live'}
+                    {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
                   <button
                     type="button"
