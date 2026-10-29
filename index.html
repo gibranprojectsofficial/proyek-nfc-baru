@@ -35,7 +35,7 @@
     const DEFAULT_DATA = {
       name: `Kedai ${currentStoreId.toUpperCase()}`,
       googleUrl: 'https://search.google.com/local/writereview?placeid=ChIJMRBecQCJJS4RDMvwWkUdNIc',
-      whatsapp: '6282180934646',
+      phone: '6282180934646',
       pin: '0000'
     };
 
@@ -65,7 +65,7 @@
               setStoreData({
                 name: data.name || `Kedai ${currentStoreId.toUpperCase()}`,
                 googleUrl: data.google_url || DEFAULT_DATA.googleUrl,
-                whatsapp: data.phone || DEFAULT_DATA.whatsapp,
+                phone: data.phone || DEFAULT_DATA.phone,
                 pin: data.pin || '0000'
               });
             }
@@ -93,7 +93,7 @@
       const handleSendFeedback = (e) => {
         e.preventDefault();
         const waMessage = encodeURIComponent(`💬 Ada masukan nih (Rating ${rating} Bintang):\n"${feedback}"\n\nSiap kita perbaiki demi kenyamanan pelanggan! 🚀`);
-        window.location.href = `https://wa.me/${storeData.whatsapp}?text=${waMessage}`;
+        window.location.href = `https://wa.me/${storeData.phone}?text=${waMessage}`;
       };
 
       const handleLoginAdmin = (e) => {
@@ -283,12 +283,12 @@
                   <div className="mb-3">
                     <label className="block text-xs text-slate-400 mb-1">Nomor WhatsApp (Diawali 62)</label>
                     <input
-                      type="text"
-                      value={storeData.whatsapp}
-                      onChange={(e) => setStoreData({...storeData, whatsapp: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-100"
-                      required
-                    />
+              type="text"
+              value={storeData.phone}
+              onChange={(e) => setStoreData({...storeData, phone: e.target.value})}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-100"
+              required
+            />
                   </div>
 
                   <div className="mb-5">
