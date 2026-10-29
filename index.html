@@ -127,7 +127,7 @@
           setSuccessMsg(true);
           setTimeout(() => setSuccessMsg(false), 3000);
         } catch (err) {
-          alert("Gagal menyimpan data ke database.");
+          alert("Gagal: " + (err.message || JSON.stringify(err)));
           console.error(err);
         } finally {
           setSaving(false);
