@@ -9,6 +9,9 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Script Supabase JS client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 select-none">
   <div id="root" class="w-full max-w-md"></div>
@@ -16,19 +19,23 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // Mengambil Parameter ID dari URL secara otomatis (Contoh: ?id=toko01)
+    // Inisialisasi Konek ke Supabase
+    const SUPABASE_URL = 'https://gpvjhfvbwhdkbzfenwai.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ux3OfNw7Jg2tkjf3DSRvkQ_BvYJHbTx';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Mengambil Parameter ID dari URL secara otomatis (Contoh: ?id=nfc-01)
     const getQueryParam = (param) => {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(param) || 'toko_default';
     };
 
     const currentStoreId = getQueryParam('id');
-    const STORAGE_KEY = `store_data_${currentStoreId}`;
 
     const DEFAULT_DATA = {
       name: `Kedai ${currentStoreId.toUpperCase()}`,
       googleUrl: 'https://search.google.com/local/writereview?placeid=ChIJMRBecQCJJS4RDMvwWkUdNIc',
-      whatsapp: '6281234567890',
+      whatsapp: '6282180934646',
       pin: '0000'
     };
 
@@ -44,25 +51,33 @@
       const [pinInput, setPinInput] = useState('');
       const [successMsg, setSuccessMsg] = useState(false);
 
-      // Load data khusus milik ID toko ini dari memori HP/Browser
+      // Load data langsung dari SUPABASE berdasarkan ID toko di URL
       useEffect(() => {
-        try {
-          const savedData = localStorage.getItem(STORAGE_KEY);
-          if (savedData) {
-            setStoreData(JSON.parse(savedData));
-          } else {
-            // Jika belum pernah diatur, pakai default dengan nama ID-nya
-            setStoreData({
-              ...DEFAULT_DATA,
-              name: `Tempat Usaha (${currentStoreId})`
-            });
+        const fetchStoreData = async () => {
+          try {
+            const { data, error } = await supabaseClient
+              .from('Toko')
+              .select('*')
+              .eq('id', currentStoreId)
+              .single();
+
+            if (data) {
+              setStoreData({
+                name: data.name || `Kedai ${currentStoreId.toUpperCase()}`,
+                googleUrl: data.google_url || DEFAULT_DATA.googleUrl,
+                whatsapp: data.phone || DEFAULT_DATA.whatsapp,
+                pin: data.pin || '0000'
+              });
+            }
+          } catch (err) {
+            console.error("Gagal memuat data dari Supabase:", err);
+          } finally {
+            setLoading(false);
           }
-        } catch (err) {
-          console.error("Gagal memuat data lokal:", err);
-        } finally {
-          setLoading(false);
-        }
-      }, []);
+        };
+
+        fetchStoreData();
+      }, [currentStoreId]);
 
       const handleStarClick = (selectedRating) => {
         setRating(selectedRating);
@@ -90,19 +105,29 @@
         }
       };
 
-      const handleSaveSettings = (e) => {
+      // FUNGSI SIMPAN DATA KE SUPABASE (REAL-TIME)
+      const handleSaveSettings = async (e) => {
         e.preventDefault();
         setSaving(true);
         try {
-          // Simpan data spesifik hanya untuk ID toko ini saja
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(storeData));
+          const { error } = await supabaseClient
+            .from('Toko')
+            .upsert({ 
+              id: currentStoreId,
+              name: storeData.name,
+              google_url: storeData.googleUrl,
+              phone: storeData.whatsapp,
+              pin: storeData.pin
+            });
+
+          if (error) throw error;
 
           setIsAdmin(false);
           setStep('rating');
           setSuccessMsg(true);
           setTimeout(() => setSuccessMsg(false), 3000);
         } catch (err) {
-          alert("Gagal menyimpan data.");
+          alert("Gagal menyimpan data ke database.");
           console.error(err);
         } finally {
           setSaving(false);
@@ -122,8 +147,6 @@
 
       return (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative">
-          
-
           <div className="absolute bottom-3 right-4">
             <button 
               onClick={() => { setStep('admin'); setPinInput(''); }}
@@ -135,7 +158,7 @@
 
           {successMsg && (
             <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500 text-emerald-300 rounded-xl text-sm text-center">
-              Pengaturan Toko Berhasil Disimpan!
+              Pengaturan Toko Berhasil Disimpan ke Supabase!
             </div>
           )}
 
@@ -300,7 +323,7 @@
           )}
 
           <div className="text-center mt-6 text-xs text-slate-600">
-            Powered by NFC System
+            Powered by NFC System & Supabase
           </div>
         </div>
       );
