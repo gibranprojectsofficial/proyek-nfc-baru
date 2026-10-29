@@ -93,7 +93,7 @@
       const handleSendFeedback = (e) => {
         e.preventDefault();
         const waMessage = encodeURIComponent(`💬 Ada masukan nih (Rating ${rating} Bintang):\n"${feedback}"\n\nSiap kita perbaiki demi kenyamanan pelanggan! 🚀`);
-        window.location.href = `https://wa.me/${storeData.phone}?text=${waMessage}`;
+        window.location.href = `https://wa.me/${storeData.phone}?text=${waMessage}`; 
       };
 
       const handleLoginAdmin = (e) => {
@@ -110,7 +110,7 @@
         e.preventDefault();
         setSaving(true);
         try {
-          const { error } = await supabaseClient
+          const { error } = await supabase
             .from('Toko')
             .upsert({ 
               id: currentStoreId,
