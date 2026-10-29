@@ -110,7 +110,7 @@
         e.preventDefault();
         setSaving(true);
         try {
-          const { error } = await supabase
+          const { error } = await secClient
             .from('Toko')
             .upsert({ 
               id: currentStoreId,
