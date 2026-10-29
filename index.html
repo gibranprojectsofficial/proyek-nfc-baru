@@ -110,15 +110,15 @@
         e.preventDefault();
         setSaving(true);
         try {
-          const { error } = await secClient
-            .from('Toko')
-            .upsert({ 
-              id: currentStoreId,
-              name: storeData.name,
-              google_url: storeData.googleUrl,
-              phone: storeData.phone,
-              pin: storeData.pin
-            });
+          const { error } = await supabase
+  .from('Toko')
+  .upsert({
+    id: currentStoreId,
+    name: storeData.name,
+    google_url: storeData.googleUrl,
+    phone: storeData.phone,
+    pin: storeData.pin
+  });
 
           if (error) throw error;
 
